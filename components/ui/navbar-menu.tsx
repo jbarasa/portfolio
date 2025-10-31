@@ -23,18 +23,23 @@ type NavbarPageProps = {
   path: string;
 };
 
-type NavbarMenuProps = {
-  pages: NavbarPageProps[];
-};
+const pages: NavbarPageProps[] = [
+  { name: "Home", path: "/" },
+  { name: "About", path: "/about" },
+  { name: "Services", path: "/services" },
+  { name: "My Work", path: "/my-work" },
+  { name: "Compendium", path: "/compendium" },
+];
 
-export default function NavbarMenu({ pages }: NavbarMenuProps) {
+export default function NavbarMenu({ ...className }) {
   const router = useRouter();
   const currentPath = usePathname();
   return (
     <nav
       className={cn(
-        "flex items-center justify-between px-24 py-2 rounded-b-3xl",
-        "bg-gray-white/60 backdrop-blur-sm"
+        "flex items-center justify-between px-24 py-2 rounded-b-3xl h-22 w-full overflow-hidden",
+        "bg-gray-white/30",
+        className
       )}
     >
       <div
@@ -87,11 +92,7 @@ export default function NavbarMenu({ pages }: NavbarMenuProps) {
       </ul>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            className={cn(
-              "bg-primary-red rounded-2xl p-6 text-md font-semibold"
-            )}
-          >
+          <Button className={cn("rounded-4xl p-6 text-md font-semibold")}>
             <HeadsetIcon className="stroke-3" /> Let&apos;s Talk
           </Button>
         </DropdownMenuTrigger>
