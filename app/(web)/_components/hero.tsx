@@ -112,13 +112,13 @@ const HeroSection = () => {
             </div>
           </div>
           <div className="flex-1">
-            <div className="absolute bottom-0 right-0">
+            <div className="absolute bottom-0 right-24">
               <Image
                 className="object-contain hover:grayscale-100 transition-all ease-linear duration-200"
                 src="/hero/joseph-barasa.png"
                 alt="Joseph Barasa's Image"
-                width={750}
-                height={950}
+                width={480}
+                height={680}
                 priority
               />
             </div>

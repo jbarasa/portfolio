@@ -79,6 +79,18 @@
   /* Custom */
   --color-primary-red: var(--primary-red);
   --color-gray-white: var(--gray-white);
+  --animate-shine: shine var(--duration) infinite linear;
+  @keyframes shine {
+  0% {
+    background-position: 0% 0%;
+    }
+  50% {
+    background-position: 100% 100%;
+    }
+  to {
+    background-position: 0% 0%;
+    }
+  }
 }
 
 :root {

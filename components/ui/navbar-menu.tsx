@@ -24,11 +24,11 @@ type NavbarPageProps = {
 };
 
 const pages: NavbarPageProps[] = [
-  { name: "Home", path: "/" },
-  { name: "About", path: "/about" },
-  { name: "Services", path: "/services" },
-  { name: "My Work", path: "/my-work" },
-  { name: "Compendium", path: "/compendium" },
+  { name: "<Home />", path: "/" },
+  { name: "<About />", path: "/about" },
+  { name: "<Services />", path: "/services" },
+  { name: "<MyWork />", path: "/my-work" },
+  { name: "<Compendium />", path: "/compendium" },
 ];
 
 export default function NavbarMenu({ ...className }) {
@@ -37,7 +37,7 @@ export default function NavbarMenu({ ...className }) {
   return (
     <nav
       className={cn(
-        "flex items-center justify-between px-24 py-2 rounded-b-3xl h-22 w-full overflow-hidden",
+        "flex items-center justify-between px-24 py-2 rounded-b-3xl h-22 w-full z-99 overflow-hidden",
         "bg-gray-white/30",
         className
       )}
