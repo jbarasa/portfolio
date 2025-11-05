@@ -1,66 +1,59 @@
-import { Button } from "@/components/ui/button";
 import HeroSection from "./_components/hero";
+import AboutHome from "./_components/about-home";
 import Image from "next/image";
-import { DownloadIcon } from "lucide-react";
-import { Lens } from "@/components/ui/lens";
-import { ShineBorder } from "@/components/ui/shine-border";
-import { WordRotate } from "@/components/ui/word-rotate";
 
 export default function Home() {
   return (
     <main>
       <HeroSection />
-      <section className="flex items-center py-46 px-24 gap-16">
-        <div className="flex-1 flex items-center justify-center bg-transparent">
-          <div className="relative rounded-3xl p-4">
-            <ShineBorder shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]} />
-            <Lens>
-              <Image
-                className="rounded-3xl object-cover"
-                src="/about/cv.png"
-                alt="CV Image"
-                width={391}
-                height={655}
-                priority
-              />
-            </Lens>
-          </div>
-        </div>
-        <div className="flex-1">
-          <div className="flex flex-col gap-8 max-w-2xl">
-            <h2 className="text-gray-500 text-6xl font-bold mb-4 tracking-tight">
-              My Journey Through{" "}
-              <WordRotate
-                className="font-extrabold text-black"
-                words={[
-                  "Coding",
-                  "Computer Programming",
-                  "Software Development",
-                ]}
-              />
-            </h2>
-            <p className="text-md">
-              I’m a proficient software developer with solid experience in
-              full-stack development using Go, React, Laravel, Flutter,
-              PostgreSQL and MariaDB. My expertise has been shaped through
-              intensive practice, online learning programs and active engagement
-              with global developer communities. I excel in designing scalable,
-              performant and maintainable systems that align with modern
-              software engineering principles. While currently holding a high
-              school certificate, I’m committed to advancing my formal education
-              and continually evolving as a developer through professional
-              collaboration and lifelong learning.
+      <AboutHome />
+      <section>
+        <h2>Professional Services</h2>
+        <div>
+          <div>
+            <h3>Enterprise Software Development</h3>
+            <p className="text-gray-600">
+              Custom business solutions including ERP systems, HR management
+              platforms and employee tracking software. Focused on scalable,
+              secure, and efficient enterprise applications.
             </p>
-            <div className="flex gap-4">
-              <Button className="rounded-4xl">About Me</Button>
-              <Button
-                variant="outline"
-                className="rounded-4xl border-2 border-black"
-              >
-                <DownloadIcon />
-                Download CV
-              </Button>
-            </div>
+            <Image
+              src="/services/e-s.png"
+              alt="enterprise software development"
+              width={100}
+              height={60}
+            />
+          </div>
+          <div>
+            <Image
+              src="/services/web-dev.jpg"
+              alt="web development"
+              width={100}
+              height={60}
+            />
+
+            <h3>Web Development</h3>
+            <p className="text-gray-600">
+              Modern web applications and websites using React, and Laravel.
+              From company websites to e-commerce platforms and customer-facing
+              web portals.
+            </p>
+          </div>
+
+          <div>
+            <h3>Mobile App Development</h3>
+            <p className="text-gray-600">
+              Cross-platform mobile applications built with React Native and
+              Flutter. Specializing in business apps, marketplace solutions, and
+              real-time tracking systems. Focus on native-like performance and
+              seamless user experience.
+            </p>
+            <Image
+              src="/services/mobile-app-dev.jpg"
+              alt="mobile app development"
+              width={100}
+              height={60}
+            />
           </div>
         </div>
       </section>
