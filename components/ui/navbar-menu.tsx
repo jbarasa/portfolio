@@ -17,6 +17,7 @@ import {
 import { Button } from "./button";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import { motion } from "motion/react";
 
 type NavbarPageProps = {
   name: string;
@@ -35,7 +36,21 @@ export default function NavbarMenu({ ...className }) {
   const router = useRouter();
   const currentPath = usePathname();
   return (
-    <nav
+    <motion.nav
+      initial={{
+        y: -100,
+        opacity: 0,
+      }}
+      animate={{
+        y: 0,
+        opacity: 1,
+      }}
+      transition={{
+        type: "spring", // gives a natural bounce
+        stiffness: 100,
+        damping: 20,
+        duration: 1.2,
+      }}
       className={cn(
         "flex items-center justify-between px-24 py-2 rounded-b-3xl h-22 w-full z-99 overflow-hidden",
         "bg-gray-white/30",
@@ -108,6 +123,6 @@ export default function NavbarMenu({ ...className }) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </nav>
+    </motion.nav>
   );
 }

@@ -1,10 +1,12 @@
 import { cn } from "@/lib/utils";
+import ReactLenis from "lenis/react";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function WebLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
+      <ReactLenis root />
       {children}
       <footer className="py-10 px-24 flex flex-col items-center justify-between gap-8">
         <div

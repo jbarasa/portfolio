@@ -1,17 +1,22 @@
+"use client";
+
 import { AuroraText } from "@/components/ui/aurora-text";
 import { Button } from "@/components/ui/button";
 import { FlickeringGrid } from "@/components/ui/flickering-grid";
+import { Globe } from "@/components/ui/globe";
 import { Highlighter } from "@/components/ui/highlighter";
 import { LightRays } from "@/components/ui/light-rays";
 import NavbarMenu from "@/components/ui/navbar-menu";
 import { WordByWordEffect } from "@/components/ui/word-by-word-effect";
 import { cn } from "@/lib/utils";
+import { motion } from "motion/react";
 import Image from "next/image";
 
 const HeroSection = () => {
   return (
     <section className="relative min-h-screen overflow-hidden">
       <NavbarMenu classname="absolute top-0 left-0 right-0 z-99" />
+      <Globe className="-z-15 max-w-[1200px] opacity-20" />
       <Image
         className="absolute inset-0 w-full h-full object-cover -z-20 opacity-20"
         src="/hero/hero-bg.svg"
@@ -83,7 +88,10 @@ const HeroSection = () => {
           </h1>
         </WordByWordEffect>
         <div className={cn("flex items-start justify-between pt-20")}>
-          <div
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 3.8, duration: 2 }}
             className={cn(
               "flex flex-col flex-1 gap-8 max-w-150 rounded-3xl p-8",
               "backdrop-blur-sm"
@@ -110,9 +118,20 @@ const HeroSection = () => {
                 Get Estimate
               </Button>
             </div>
-          </div>
+          </motion.div>
           <div className="flex-1">
-            <div className="absolute bottom-0 right-24">
+            <motion.div
+              initial={{ y: 300, scale: 0.5, opacity: 0 }}
+              animate={{ y: 0, scale: 1, opacity: 1 }}
+              transition={{
+                delay: 2.5,
+                type: "spring",
+                stiffness: 80,
+                damping: 18,
+                duration: 1.5,
+              }}
+              className="absolute bottom-0 right-24"
+            >
               <Image
                 className="object-contain hover:grayscale-100 transition-all ease-linear duration-200"
                 src="/hero/joseph-barasa.png"
@@ -121,7 +140,7 @@ const HeroSection = () => {
                 height={680}
                 priority
               />
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>
