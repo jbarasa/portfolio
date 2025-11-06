@@ -15,7 +15,7 @@ export default function MySkills({
   how,
 }: MySkillsProps) {
   return (
-    <div className="p-4 flex flex-col gap-4 border border-gray-500 shadow-xs shadow-gray-50 rounded-3xl max-w-2xl">
+    <div className="p-4 flex flex-col gap-4 max-w-2xl">
       <div className="rounded-[100%] w-20 h-20 flex items-center justify-center">
         <Image
           src={skillImage}

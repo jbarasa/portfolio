@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { DownloadIcon } from "lucide-react";
@@ -7,6 +9,8 @@ import { WordRotate } from "@/components/ui/word-rotate";
 import Link from "next/link";
 import ScrollySection from "@/components/ui/scrolly-section";
 import MySkills from "./_about/my-skills";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import MyServices from "./services";
 
 export default function AboutHome() {
   return (
@@ -103,11 +107,11 @@ export default function AboutHome() {
         </div>
       </ScrollySection>
 
-      <section className="py-35 px-24">
+      <MyServices />
+
+      <section className="bg-cyan-50/20 py-35 px-24">
         <div className=" bg-gray-100  px-8 py-2 max-w-fit mx-auto rounded-4xl">
-          <h2 className="font-extrabold text-2xl">
-            The Programming Friends I Chose
-          </h2>
+          <h2 className="font-extrabold text-2xl">My Programming Stack</h2>
         </div>
         <div className="grid grid-cols-3 gap-x-12 gap-y-18 py-18">
           <MySkills
@@ -189,8 +193,8 @@ export default function AboutHome() {
               </p>
             }
           />
-          <div className="p-4 flex flex-col gap-4 border border-gray-500 shadow-xs shadow-gray-50 rounded-3xl max-w-2xl">
-            <div className="flex items-center justify-between">
+          <div className="p-4 flex flex-col gap-4 max-w-2xl">
+            <div className="flex items-center">
               <div className="rounded-[100%] w-20 h-20 flex items-center justify-center">
                 <Image
                   src="/about/r-native.png"
@@ -201,7 +205,7 @@ export default function AboutHome() {
                 />
               </div>
 
-              <div className="rounded-[100%] w-20 h-20 flex items-center justify-center">
+              <div className="rounded-[100%] w-20 h-20 flex items-center justify-center -ml-8">
                 <Image
                   src="/about/flutter.jpg"
                   alt="Flutter Logo"
@@ -239,8 +243,8 @@ export default function AboutHome() {
               </p>
             </div>
           </div>
-          <div className="p-4 flex flex-col gap-4 border border-gray-500 shadow-xs shadow-gray-50 rounded-3xl max-w-2xl">
-            <div className="flex items-center justify-between">
+          <div className="p-4 flex flex-col gap-4 max-w-2xl">
+            <div className="flex items-center">
               <div className="rounded-[100%] w-20 h-20 flex items-center justify-center">
                 <Image
                   src="/about/postgres.jpg"
@@ -251,7 +255,7 @@ export default function AboutHome() {
                 />
               </div>
 
-              <div className="rounded-[100%] w-20 h-20 flex items-center justify-center">
+              <div className="rounded-[100%] w-20 h-20 flex items-center justify-center -ml-8">
                 <Image
                   src="/about/maria-db.jpg"
                   alt="Flutter Logo"
@@ -292,46 +296,53 @@ export default function AboutHome() {
         </div>
       </section>
 
-      <section className="bg-blue-50 py-35 px-24">
-        <h2>DevOps/Deployment</h2>
-        <h4>Current Stack</h4>
-        <p>
-          I primarily work with VPS (Virtual Private Servers) running
-          Debian-based systems for production deployments. My expertise includes
-          configuring and managing:
-        </p>
-        <ul className="list-disc pl-6 mt-2 space-y-2">
-          <li>
-            Web servers like Nginx, Traefik, and Caddy for reverse proxy and SSL
-            management
-          </li>
-          <li>Continuous deployment pipelines using GitHub Actions</li>
-          <li>
-            Docker containers for consistent development and production
-            environments
-          </li>
-          <li>Server monitoring and maintenance</li>
-        </ul>
-
-        <h4 className="mt-6">Cloud Platforms</h4>
-        <p>
-          For projects requiring rapid deployment and simplified management, I
-          leverage:
-        </p>
-        <ul className="list-disc pl-6 mt-2 space-y-2">
-          <li>Vercel for Next.js and React applications</li>
-          <li>Netlify for static sites and JAMstack applications</li>
-        </ul>
-
-        <h4 className="mt-6">Future Growth</h4>
-        <p>
-          I&apos;m actively expanding my DevOps knowledge and plan to explore:
-        </p>
-        <ul className="list-disc pl-6 mt-2 space-y-2">
-          <li>AWS cloud infrastructure and services</li>
-          <li>Google Cloud Platform for scalable solutions</li>
-          <li>Kubernetes for container orchestration</li>
-        </ul>
+      <section className="bg-blue-50/50 py-35 px-24 flex items-center">
+        <div className="flex-1">
+          <div className="max-w-2xl flex flex-col gap-12">
+            <h2 className="text-6xl font-bold">DevOps/Deployment</h2>
+            <div className="bg-green-50/50 p-8 rounded-3xl backdrop-blur-sm">
+              <h4 className="font-semibold pb-4">Current Stack</h4>
+              <p>
+                I primarily work with{" "}
+                <span className="font-semibold">
+                  VPS (Virtual Private Servers)
+                </span>{" "}
+                running Debian-based systems for production deployments. My
+                expertise includes configuring and managing:
+              </p>
+              <ul className="list-disc pl-6 mt-2 space-y-2">
+                <li>
+                  Web servers like Nginx, Traefik, and Caddy for reverse proxy
+                  and SSL management
+                </li>
+                <li>Continuous deployment pipelines using GitHub Actions</li>
+                <li>
+                  Docker containers for consistent development and production
+                  environments
+                </li>
+                <li>Server monitoring and maintenance</li>
+              </ul>
+            </div>
+            <div className="bg-white p-8 rounded-3xl backdrop-blur-sm">
+              <h4 className="font-semibold pb-4">Cloud Platforms</h4>
+              <p>
+                For projects requiring rapid deployment and simplified
+                management, I leverage:
+              </p>
+              <ul className="list-disc pl-6 mt-2 space-y-2">
+                <li>Vercel for Next.js and React applications</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 flex justify-center items-center">
+          <DotLottieReact
+            src="/about/devops.lottie"
+            loop
+            autoplay
+            className="w-[650px] h-[650px] max-w-full"
+          />
+        </div>
       </section>
     </>
   );
