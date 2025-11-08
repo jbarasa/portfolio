@@ -1,8 +1,7 @@
 "use client";
-
 import { cn } from "@/lib/utils";
 import { stagger, useAnimate } from "motion/react";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 export const WordByWordEffect = ({
   children,
@@ -16,10 +15,19 @@ export const WordByWordEffect = ({
   duration?: number;
 }) => {
   const [scope, animate] = useAnimate();
-  const hasAnimated = useRef(false);
 
   useEffect(() => {
-    if (!hasAnimated.current) {
+    // Reset animation state first
+    const spans = scope.current?.querySelectorAll(".word-span");
+    if (spans) {
+      spans.forEach((span: Element) => {
+        (span as HTMLElement).style.opacity = "0";
+        (span as HTMLElement).style.filter = filter ? "blur(10px)" : "none";
+      });
+    }
+
+    // Trigger animation
+    const animationTimeout = setTimeout(() => {
       animate(
         ".word-span",
         {
@@ -29,16 +37,17 @@ export const WordByWordEffect = ({
         {
           duration: duration,
           delay: stagger(0.2),
-        }
+        },
       );
-      hasAnimated.current = true;
-    }
-  }, [animate, duration, filter]);
+    }, 100);
+
+    return () => clearTimeout(animationTimeout);
+  }, [animate, duration, filter, scope]);
 
   return (
     <div className={cn("font-bold", className)} ref={scope}>
       <div className="mt-4">
-        <div className="dark:text-white text-black text-2xl leading-snug tracking-wide">
+        <div className="text-2xl leading-snug tracking-wide text-black dark:text-white">
           {children}
         </div>
       </div>

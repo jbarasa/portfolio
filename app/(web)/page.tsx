@@ -1,11 +1,15 @@
 import HeroSection from "./_components/hero";
-import AboutHome from "./_components/about-home";
+import About from "./_components/about";
+import MyServices from "./_components/services";
+import TechStack from "./_components/tech-stack";
 
 export default function Home() {
   return (
     <main>
       <HeroSection />
-      <AboutHome />
+      <About />
+      <MyServices />
+      <TechStack />
     </main>
   );
 }

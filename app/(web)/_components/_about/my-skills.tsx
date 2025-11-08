@@ -15,24 +15,28 @@ export default function MySkills({
   how,
 }: MySkillsProps) {
   return (
-    <div className="p-4 flex flex-col gap-4 max-w-2xl">
-      <div className="rounded-[100%] w-20 h-20 flex items-center justify-center">
+    <div className="flex max-w-2xl flex-col gap-4 p-4">
+      <div className="flex h-12 w-12 items-center justify-center rounded-[100%] md:h-20 md:w-20">
         <Image
           src={skillImage}
           alt={`${skill} Logo`}
-          className="w-20 height-20 rounded-[100%] object-cover"
+          className="h-12 w-12 rounded-[100%] object-cover md:h-20 md:w-20"
           width={100}
           height={100}
         />
       </div>
-      <div className="pt-8">
-        <h2 className="text-xl font-bold">{skill}</h2>
-        <div className=" bg-gray-100  px-2 max-w-fit rounded-4xl mt-4">
-          <h4 className="font-semibold text-gray-500 text-sm">Why</h4>
+      <div className="pt-1 md:pt-2">
+        <h2 className="text-lg font-bold md:text-xl">{skill}</h2>
+        <div className="mt-2 max-w-fit rounded-4xl bg-gray-100 px-2 md:mt-3">
+          <h4 className="text-xs font-semibold text-gray-500 md:text-sm">
+            Why
+          </h4>
         </div>
         {why}
-        <div className=" bg-gray-100  px-2 max-w-fit rounded-4xl mt-4">
-          <h4 className="font-semibold text-gray-500 text-sm">How</h4>
+        <div className="mt-4 max-w-fit rounded-4xl bg-gray-100 px-2">
+          <h4 className="text-xs font-semibold text-gray-500 md:text-sm">
+            How
+          </h4>
         </div>
         {how}
       </div>
