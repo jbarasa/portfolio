@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { HiChat, HiX, HiPaperAirplane, HiMail, HiPhone } from "react-icons/hi";
 import { useChat } from "@/lib/context/ChatContext";
+import { createClient } from "@/lib/supabase/client";
 
 const ChatWidget: React.FC = () => {
   const {
@@ -14,6 +15,7 @@ const ChatWidget: React.FC = () => {
     visitorInfo,
     setVisitorInfo,
     startChat,
+    chatId,
   } = useChat();
   const [inputValue, setInputValue] = useState("");
   const [contactInput, setContactInput] = useState({
@@ -23,7 +25,74 @@ const ChatWidget: React.FC = () => {
   // Initialize showContactForm based on visitorInfo
   const [showContactForm, setShowContactForm] = useState(!visitorInfo);
   const [contactError, setContactError] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [adminIsTyping, setAdminIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Broadcast typing indicator
+  const broadcastTyping = useCallback(
+    (typing: boolean) => {
+      if (!chatId) return;
+
+      const supabase = createClient();
+      supabase.channel("typing_indicators").send({
+        type: "broadcast",
+        event: "typing",
+        payload: { chatId, isTyping: typing },
+      });
+    },
+    [chatId]
+  );
+
+  // Handle input change with typing indicator
+  const handleInputChange = (value: string) => {
+    setInputValue(value);
+
+    if (!isTyping && value.length > 0) {
+      setIsTyping(true);
+      broadcastTyping(true);
+    }
+
+    // Reset typing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Stop typing indicator after 2 seconds of no input
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      broadcastTyping(false);
+    }, 2000);
+  };
+
+  // Clean up typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Subscribe to admin typing indicators
+  useEffect(() => {
+    if (!chatId) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel("admin_typing")
+      .on("broadcast", { event: "admin_typing" }, (payload) => {
+        if (payload.payload.chatId === chatId) {
+          setAdminIsTyping(payload.payload.isTyping);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [chatId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -67,6 +136,13 @@ const ChatWidget: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
+
+    // Stop typing indicator when sending
+    setIsTyping(false);
+    broadcastTyping(false);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
 
     addMessage(inputValue.trim(), "user");
     setInputValue("");
@@ -253,6 +329,35 @@ const ChatWidget: React.FC = () => {
                     </div>
                   </div>
                 ))}
+
+                {/* Admin typing indicator */}
+                {adminIsTyping && (
+                  <div className="flex gap-2">
+                    <div className="w-7 sm:w-8 h-7 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                      <HiChat
+                        size={12}
+                        className="text-blue-600 sm:w-3.5 sm:h-3.5"
+                      />
+                    </div>
+                    <div className="bg-gray-100 rounded-2xl rounded-tl-none p-2.5 sm:p-3">
+                      <div className="flex items-center gap-1">
+                        <span
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0ms" }}
+                        />
+                        <span
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "150ms" }}
+                        />
+                        <span
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div ref={messagesEndRef} />
               </div>
 
@@ -265,7 +370,7 @@ const ChatWidget: React.FC = () => {
                   <input
                     type="text"
                     value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
+                    onChange={(e) => handleInputChange(e.target.value)}
                     placeholder="Type your message..."
                     className="flex-1 px-3 sm:px-4 py-2 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />

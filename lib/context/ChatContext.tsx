@@ -105,7 +105,19 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   const startChat = useCallback(
     async (info?: VisitorInfo) => {
       const currentVisitorInfo = info || visitorInfo;
-      if (!chatId || !currentVisitorInfo || hasStartedChat) return;
+      console.log("startChat called:", {
+        chatId,
+        currentVisitorInfo,
+        hasStartedChat,
+      });
+      if (!chatId || !currentVisitorInfo || hasStartedChat) {
+        console.log("startChat skipped:", {
+          chatId,
+          currentVisitorInfo,
+          hasStartedChat,
+        });
+        return;
+      }
 
       try {
         const res = await fetch("/api/chat/session", {
@@ -118,11 +130,17 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
           }),
         });
 
+        const data = await res.json();
+        console.log("Session created response:", data);
+
         if (res.ok) {
           setHasStartedChat(true);
           if (typeof window !== "undefined") {
             localStorage.setItem("jbarasa_chat_started", "true");
           }
+          console.log("Chat session started successfully");
+        } else {
+          console.error("Failed to create session:", data);
         }
       } catch (error) {
         console.error("Error starting chat:", error);
@@ -264,9 +282,15 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       setMessages((prev) => [...prev, newMessage]);
 
       // Only save to database if chat has been started
+      console.log("addMessage called:", {
+        chatId,
+        hasStartedChat,
+        sender,
+        content,
+      });
       if (chatId && hasStartedChat) {
         try {
-          await fetch("/api/chat/messages", {
+          const res = await fetch("/api/chat/messages", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -275,9 +299,16 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
               content,
             }),
           });
+          const data = await res.json();
+          console.log("Message saved response:", data);
         } catch (error) {
           console.error("Error saving message:", error);
         }
+      } else {
+        console.warn("Message not saved - chat not started:", {
+          chatId,
+          hasStartedChat,
+        });
       }
     },
     [chatId, hasStartedChat]
