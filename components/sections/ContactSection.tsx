@@ -148,7 +148,7 @@ const ContactSection: React.FC = () => {
             <Card
               variant="bordered"
               padding="lg"
-              className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200"
+              className="bg-linear-to-br from-green-50 to-emerald-50 border-green-200"
             >
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-green-500 rounded-lg">

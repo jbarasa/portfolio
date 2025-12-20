@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 
-// GET - Get messages (optionally by session)
+// GET - Get messages (optionally by chat ID)
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get("sessionId");
+    const chatId = searchParams.get("chatId");
 
     const supabase = await createServerClient();
 
@@ -15,8 +15,8 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: false })
       .limit(100);
 
-    if (sessionId) {
-      query = query.eq("session_id", sessionId);
+    if (chatId) {
+      query = query.eq("chat_id", chatId);
     }
 
     const { data, error } = await query;
@@ -37,9 +37,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { sessionId, sender, content } = body;
+    const { chatId, sender, content } = body;
 
-    if (!sessionId || !sender || !content) {
+    if (!chatId || !sender || !content) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -47,8 +47,15 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createServerClient();
+
+    // Update last_message_at in chat_sessions
+    await supabase
+      .from("chat_sessions")
+      .update({ last_message_at: new Date().toISOString() })
+      .eq("chat_id", chatId);
+
     const { error } = await supabase.from("chat_messages").insert({
-      session_id: sessionId,
+      chat_id: chatId,
       sender,
       content,
     });

@@ -20,6 +20,11 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+interface VisitorInfo {
+  email?: string;
+  phone?: string;
+}
+
 interface ChatContextType {
   isOnline: boolean;
   setIsOnline: (online: boolean) => void;
@@ -28,34 +33,98 @@ interface ChatContextType {
   messages: ChatMessage[];
   addMessage: (content: string, sender: "user" | "admin") => void;
   clearMessages: () => void;
-  sessionId: string;
+  chatId: string;
+  visitorInfo: VisitorInfo | null;
+  setVisitorInfo: (info: VisitorInfo) => void;
+  hasStartedChat: boolean;
+  startChat: () => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-// Generate or retrieve session ID
-function getInitialSessionId(): string {
+// Generate or retrieve chat ID from localStorage (persistent across sessions)
+function getOrCreateChatId(): string {
   if (typeof window === "undefined") return "";
-  let sessionId = sessionStorage.getItem("chat_session_id");
-  if (!sessionId) {
-    sessionId = `session_${Date.now()}_${Math.random()
+  let chatId = localStorage.getItem("jbarasa_chat_id");
+  if (!chatId) {
+    chatId = `chat_${Date.now()}_${Math.random()
       .toString(36)
-      .substring(2, 9)}`;
-    sessionStorage.setItem("chat_session_id", sessionId);
+      .substring(2, 11)}`;
+    localStorage.setItem("jbarasa_chat_id", chatId);
   }
-  return sessionId;
+  return chatId;
+}
+
+// Get visitor info from localStorage
+function getStoredVisitorInfo(): VisitorInfo | null {
+  if (typeof window === "undefined") return null;
+  const stored = localStorage.getItem("jbarasa_visitor_info");
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+// Check if chat has been started (exists in DB)
+function getHasStartedChat(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem("jbarasa_chat_started") === "true";
 }
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [sessionId] = useState(() => getInitialSessionId());
+  const [chatId] = useState(() => getOrCreateChatId());
   const [isOnline, setIsOnline] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [visitorInfo, setVisitorInfoState] = useState<VisitorInfo | null>(() =>
+    getStoredVisitorInfo()
+  );
+  const [hasStartedChat, setHasStartedChat] = useState(() =>
+    getHasStartedChat()
+  );
   const supabaseRef = useRef(createClient());
   const statusChannelRef = useRef<RealtimeChannel | null>(null);
   const messagesChannelRef = useRef<RealtimeChannel | null>(null);
+
+  // Set visitor info and persist to localStorage
+  const setVisitorInfo = useCallback((info: VisitorInfo) => {
+    setVisitorInfoState(info);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("jbarasa_visitor_info", JSON.stringify(info));
+    }
+  }, []);
+
+  // Start chat - creates session in database
+  const startChat = useCallback(async () => {
+    if (!chatId || !visitorInfo || hasStartedChat) return;
+
+    try {
+      const res = await fetch("/api/chat/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatId,
+          email: visitorInfo.email,
+          phone: visitorInfo.phone,
+        }),
+      });
+
+      if (res.ok) {
+        setHasStartedChat(true);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("jbarasa_chat_started", "true");
+        }
+      }
+    } catch (error) {
+      console.error("Error starting chat:", error);
+    }
+  }, [chatId, visitorInfo, hasStartedChat]);
 
   // Fetch initial admin status and subscribe to realtime updates
   useEffect(() => {
@@ -99,16 +168,16 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     };
   }, []);
 
-  // Subscribe to realtime messages when chat is open
+  // Subscribe to realtime messages when chat is open and started
   useEffect(() => {
-    if (!isChatOpen || !sessionId) return;
+    if (!isChatOpen || !chatId || !hasStartedChat) return;
 
     const supabase = supabaseRef.current;
 
-    // Fetch existing messages for this session
+    // Fetch existing messages for this chat
     const fetchMessages = async () => {
       try {
-        const res = await fetch(`/api/chat/messages?sessionId=${sessionId}`);
+        const res = await fetch(`/api/chat/messages?chatId=${chatId}`);
         const data = await res.json();
         if (data.messages) {
           const formattedMessages = data.messages
@@ -135,16 +204,16 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
 
     fetchMessages();
 
-    // Subscribe to new messages for this session
+    // Subscribe to new messages for this chat
     messagesChannelRef.current = supabase
-      .channel(`messages_${sessionId}`)
+      .channel(`messages_${chatId}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "chat_messages",
-          filter: `session_id=eq.${sessionId}`,
+          filter: `chat_id=eq.${chatId}`,
         },
         (payload) => {
           const newMsg = payload.new as {
@@ -175,7 +244,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         supabase.removeChannel(messagesChannelRef.current);
       }
     };
-  }, [isChatOpen, sessionId]);
+  }, [isChatOpen, chatId, hasStartedChat]);
 
   const addMessage = useCallback(
     async (content: string, sender: "user" | "admin") => {
@@ -189,14 +258,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       };
       setMessages((prev) => [...prev, newMessage]);
 
-      // Save to database
-      if (sessionId) {
+      // Only save to database if chat has been started
+      if (chatId && hasStartedChat) {
         try {
           await fetch("/api/chat/messages", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              sessionId,
+              chatId,
               sender: sender === "user" ? "visitor" : "admin",
               content,
             }),
@@ -206,7 +275,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         }
       }
     },
-    [sessionId]
+    [chatId, hasStartedChat]
   );
 
   const clearMessages = useCallback(() => {
@@ -222,9 +291,24 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       messages,
       addMessage,
       clearMessages,
-      sessionId,
+      chatId,
+      visitorInfo,
+      setVisitorInfo,
+      hasStartedChat,
+      startChat,
     }),
-    [isOnline, isChatOpen, messages, addMessage, clearMessages, sessionId]
+    [
+      isOnline,
+      isChatOpen,
+      messages,
+      addMessage,
+      clearMessages,
+      chatId,
+      visitorInfo,
+      setVisitorInfo,
+      hasStartedChat,
+      startChat,
+    ]
   );
 
   return (

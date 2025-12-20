@@ -1,10 +1,19 @@
 // Database Types
 export interface ChatMessage {
   id: number;
-  session_id: string;
+  chat_id: string;
   sender: "visitor" | "admin";
   content: string;
   created_at: string;
+}
+
+export interface ChatSession {
+  id: number;
+  chat_id: string;
+  email?: string;
+  phone?: string;
+  created_at: string;
+  last_message_at: string;
 }
 
 export interface Setting {
@@ -25,6 +34,11 @@ export interface Database {
         Row: ChatMessage;
         Insert: Omit<ChatMessage, "id" | "created_at">;
         Update: Partial<ChatMessage>;
+      };
+      chat_sessions: {
+        Row: ChatSession;
+        Insert: Omit<ChatSession, "id" | "created_at" | "last_message_at">;
+        Update: Partial<ChatSession>;
       };
     };
   };
