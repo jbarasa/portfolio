@@ -38,6 +38,7 @@ interface ChatContextType {
   setVisitorInfo: (info: VisitorInfo) => void;
   hasStartedChat: boolean;
   startChat: (info?: VisitorInfo) => Promise<void>;
+  unreadCount: number;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -80,8 +81,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [chatId] = useState(() => getOrCreateChatId());
   const [isOnline, setIsOnline] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatOpen, setIsChatOpenState] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [visitorInfo, setVisitorInfoState] = useState<VisitorInfo | null>(() =>
     getStoredVisitorInfo()
   );
@@ -91,6 +93,20 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   const supabaseRef = useRef(createClient());
   const statusChannelRef = useRef<RealtimeChannel | null>(null);
   const messagesChannelRef = useRef<RealtimeChannel | null>(null);
+  const isChatOpenRef = useRef(isChatOpen);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    isChatOpenRef.current = isChatOpen;
+  }, [isChatOpen]);
+
+  // Custom setIsChatOpen that clears unread count when opening
+  const setIsChatOpen = useCallback((open: boolean) => {
+    setIsChatOpenState(open);
+    if (open) {
+      setUnreadCount(0);
+    }
+  }, []);
 
   // Set visitor info and persist to localStorage
   const setVisitorInfo = useCallback((info: VisitorInfo) => {
@@ -175,9 +191,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     };
   }, []);
 
-  // Subscribe to realtime messages when chat is open and started
+  // Subscribe to realtime messages when chat has started (always active, not just when open)
   useEffect(() => {
-    if (!isChatOpen || !chatId || !hasStartedChat) return;
+    if (!chatId || !hasStartedChat) return;
 
     const supabase = supabaseRef.current;
 
@@ -242,16 +258,25 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
             }
             return [...prev, formattedMessage];
           });
+
+          // Increment unread count if chat is closed and message is from admin
+          if (!isChatOpenRef.current && newMsg.sender === "admin") {
+            setUnreadCount((prev) => prev + 1);
+          }
         }
       )
       .subscribe();
+
+    // Also poll every 10 seconds as backup for reliability
+    const pollInterval = setInterval(fetchMessages, 10000);
 
     return () => {
       if (messagesChannelRef.current) {
         supabase.removeChannel(messagesChannelRef.current);
       }
+      clearInterval(pollInterval);
     };
-  }, [isChatOpen, chatId, hasStartedChat]);
+  }, [chatId, hasStartedChat]);
 
   const addMessage = useCallback(
     async (content: string, sender: "user" | "admin") => {
@@ -332,6 +357,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       setVisitorInfo,
       hasStartedChat,
       startChat,
+      unreadCount,
     }),
     [
       isOnline,
@@ -344,6 +370,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       setVisitorInfo,
       hasStartedChat,
       startChat,
+      unreadCount,
     ]
   );
 

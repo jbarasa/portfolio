@@ -16,6 +16,7 @@ const ChatWidget: React.FC = () => {
     setVisitorInfo,
     startChat,
     chatId,
+    unreadCount,
   } = useChat();
   const [inputValue, setInputValue] = useState("");
   const [contactInput, setContactInput] = useState({
@@ -161,12 +162,20 @@ const ChatWidget: React.FC = () => {
           <span className="hidden sm:inline text-sm font-medium">
             {isOnline ? "Chat Now" : "Leave Message"}
           </span>
-          {/* Online/Offline indicator */}
-          <span
-            className={`absolute top-0 right-0 w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full border-2 border-white ${
-              isOnline ? "bg-green-500 animate-pulse" : "bg-gray-400"
-            }`}
-          />
+          {/* Unread count badge */}
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-bounce">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+          {/* Online/Offline indicator (only show if no unread) */}
+          {unreadCount === 0 && (
+            <span
+              className={`absolute top-0 right-0 w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full border-2 border-white ${
+                isOnline ? "bg-green-500 animate-pulse" : "bg-gray-400"
+              }`}
+            />
+          )}
         </button>
       )}
 
