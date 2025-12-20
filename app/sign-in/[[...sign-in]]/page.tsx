@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { HiMail, HiLockClosed, HiEye, HiEyeOff } from "react-icons/hi";
 import { useAuth } from "@/lib/auth";
@@ -37,7 +36,14 @@ export default function SignInPage() {
     setIsLoading(false);
 
     if (result.error) {
-      setError(result.error);
+      // Provide a more helpful message for email confirmation error
+      if (result.error.toLowerCase().includes("email not confirmed")) {
+        setError(
+          "Please check your email inbox and click the confirmation link to verify your account before signing in."
+        );
+      } else {
+        setError(result.error);
+      }
     } else {
       router.push("/");
       router.refresh(); // Refresh to update session state
@@ -54,22 +60,6 @@ export default function SignInPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-linear-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <header className="p-4">
-        <Link href="/" className="flex items-center gap-2 w-fit">
-          <Image
-            src="/logo.jpg"
-            alt="Jbarasa Logo"
-            width={40}
-            height={40}
-            className="rounded-lg"
-          />
-          <span className="font-heading font-bold text-xl text-gray-900">
-            Jbarasa
-          </span>
-        </Link>
-      </header>
-
       {/* Sign In Form */}
       <main className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-md">
@@ -146,6 +136,14 @@ export default function SignInPage() {
                       <HiEye size={20} />
                     )}
                   </button>
+                </div>
+                <div className="text-right mt-1">
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    Forgot password?
+                  </Link>
                 </div>
               </div>
 
