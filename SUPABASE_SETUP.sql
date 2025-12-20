@@ -54,6 +54,22 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages (create
 
 CREATE INDEX IF NOT EXISTS idx_settings_key ON settings (key);
 
+-- Projects table for portfolio showcase
+CREATE TABLE IF NOT EXISTS
+    projects (
+        id BIGSERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        url TEXT NOT NULL,
+        image_url TEXT,
+        tech_stack TEXT[] DEFAULT '{}',
+        show_tech BOOLEAN DEFAULT true,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+CREATE INDEX IF NOT EXISTS idx_projects_created_at ON projects (created_at DESC);
+
 -- Insert default admin_online setting
 INSERT INTO
     settings (key, value)
@@ -124,6 +140,23 @@ INSERT
 WITH
     CHECK (true);
 
+-- Projects policies: Anyone can read, only authenticated users can modify
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read access to projects" ON projects FOR
+SELECT TO public USING (true);
+
+CREATE POLICY "Authenticated users can insert projects" ON projects FOR
+INSERT
+    TO authenticated
+WITH
+    CHECK (true);
+
+CREATE POLICY "Authenticated users can update projects" ON projects FOR
+UPDATE TO authenticated USING (true);
+
+CREATE POLICY "Authenticated users can delete projects" ON projects FOR DELETE TO authenticated USING (true);
+
 -- =============================================
 -- Enable Realtime for tables
 -- =============================================
@@ -181,6 +214,48 @@ WITH
 
 CREATE POLICY "Service role can read contact_submissions" ON contact_submissions FOR
 SELECT TO service_role USING (true);
+
+-- =============================================
+-- Blog Posts Table
+-- =============================================
+CREATE TABLE IF NOT EXISTS blog_posts (
+    id BIGSERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    excerpt TEXT,
+    content TEXT NOT NULL,
+    cover_image TEXT,
+    published BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts (slug);
+
+CREATE INDEX IF NOT EXISTS idx_blog_posts_published ON blog_posts (published);
+
+CREATE INDEX IF NOT EXISTS idx_blog_posts_created_at ON blog_posts (created_at DESC);
+
+-- Enable RLS for blog_posts
+ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
+
+-- Blog policies: Anyone can read published posts, only authenticated users can modify
+CREATE POLICY "Public read access to published blog posts" ON blog_posts FOR
+SELECT TO public USING (published = true);
+
+CREATE POLICY "Authenticated users can read all blog posts" ON blog_posts FOR
+SELECT TO authenticated USING (true);
+
+CREATE POLICY "Authenticated users can insert blog posts" ON blog_posts FOR
+INSERT
+    TO authenticated
+WITH
+    CHECK (true);
+
+CREATE POLICY "Authenticated users can update blog posts" ON blog_posts FOR
+UPDATE TO authenticated USING (true);
+
+CREATE POLICY "Authenticated users can delete blog posts" ON blog_posts FOR DELETE TO authenticated USING (true);
 
 -- =============================================
 -- Done! Your database is ready.
