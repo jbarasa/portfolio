@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { SignedIn, UserButton } from "@clerk/nextjs";
+import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { HiMenu, HiX } from "react-icons/hi";
 import Button from "@/components/ui/Button";
 
@@ -50,19 +50,13 @@ const Header: React.FC = () => {
 
           {/* Auth & CTA */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Sign Up with Coming Soon badge */}
-            <div className="hidden sm:block relative group">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="cursor-default opacity-70"
-              >
-                Sign Up
-              </Button>
-              <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
-                Dashboard Coming Soon
-              </span>
-            </div>
+            <SignedOut>
+              <SignInButton mode="modal">
+                <button className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 hidden sm:block">
+                  Admin
+                </button>
+              </SignInButton>
+            </SignedOut>
             <SignedIn>
               <Link href="/admin" className="hidden sm:block">
                 <Button variant="ghost" size="sm">
@@ -109,10 +103,13 @@ const Header: React.FC = () => {
                   Dashboard
                 </Link>
               </SignedIn>
-              {/* Mobile Sign Up */}
-              <div className="py-2 text-sm font-medium text-gray-400">
-                Sign Up <span className="text-xs">(Dashboard Coming Soon)</span>
-              </div>
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <button className="text-gray-600 hover:text-gray-900 py-2 text-sm font-medium text-left">
+                    Admin Login
+                  </button>
+                </SignInButton>
+              </SignedOut>
               <a href="#contact" onClick={() => setIsMenuOpen(false)}>
                 <Button size="sm" fullWidth className="mt-2">
                   Start Chat
