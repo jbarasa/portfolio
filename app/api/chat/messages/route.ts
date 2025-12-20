@@ -22,13 +22,11 @@ export async function GET(request: Request) {
     const { data, error } = await query;
 
     if (error) {
-      console.error("Supabase error:", error);
       return NextResponse.json({ messages: [] });
     }
 
     return NextResponse.json({ messages: data || [] });
-  } catch (error) {
-    console.error("Error getting messages:", error);
+  } catch {
     return NextResponse.json({ messages: [] });
   }
 }
@@ -37,7 +35,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { chatId, sender, content } = body;
+    const { chatId, sender, content, email, phone } = body;
 
     if (!chatId || !sender || !content) {
       return NextResponse.json(
@@ -48,11 +46,35 @@ export async function POST(request: Request) {
 
     const supabase = await createServerClient();
 
-    // Update last_message_at in chat_sessions
-    await supabase
-      .from("chat_sessions")
-      .update({ last_message_at: new Date().toISOString() })
-      .eq("chat_id", chatId);
+    // Check if session exists, create if not (for visitor messages)
+    if (sender === "visitor") {
+      const { data: existingSession } = await supabase
+        .from("chat_sessions")
+        .select("id")
+        .eq("chat_id", chatId)
+        .single();
+
+      if (!existingSession) {
+        // Create session automatically
+        await supabase.from("chat_sessions").insert({
+          chat_id: chatId,
+          email: email || null,
+          phone: phone || null,
+        });
+      } else {
+        // Update last_message_at
+        await supabase
+          .from("chat_sessions")
+          .update({ last_message_at: new Date().toISOString() })
+          .eq("chat_id", chatId);
+      }
+    } else {
+      // For admin messages, just update last_message_at
+      await supabase
+        .from("chat_sessions")
+        .update({ last_message_at: new Date().toISOString() })
+        .eq("chat_id", chatId);
+    }
 
     const { error } = await supabase.from("chat_messages").insert({
       chat_id: chatId,
@@ -61,7 +83,6 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      console.error("Supabase error:", error);
       return NextResponse.json(
         { error: "Failed to save message" },
         { status: 500 }
@@ -69,8 +90,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error saving message:", error);
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

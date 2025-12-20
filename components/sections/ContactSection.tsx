@@ -21,13 +21,33 @@ const ContactSection: React.FC = () => {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In production, this would send to an API endpoint
-    console.log("Form submitted:", formData);
-    setSubmitted(true);
-    setFormData({ name: "", email: "", message: "" });
+    setIsSubmitting(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+        setFormData({ name: "", email: "", message: "" });
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to send message. Please try again.");
+      }
+    } catch {
+      setError("Failed to send message. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (
@@ -130,13 +150,19 @@ const ContactSection: React.FC = () => {
                     placeholder="Describe the bug, feature, or documentation you need help with..."
                   />
                 </div>
+                {error && (
+                  <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+                    {error}
+                  </p>
+                )}
                 <Button
                   type="submit"
                   fullWidth
                   icon={HiPaperAirplane}
                   iconPosition="right"
+                  disabled={isSubmitting}
                 >
-                  Send Message
+                  {isSubmitting ? "Sending..." : "Send Message"}
                 </Button>
               </form>
             )}

@@ -159,5 +159,29 @@ CREATE TRIGGER on_auth_user_created
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- =============================================
+-- Contact Form Submissions Table
+-- =============================================
+CREATE TABLE IF NOT EXISTS contact_submissions (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    message TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS for contact_submissions
+ALTER TABLE contact_submissions ENABLE ROW LEVEL SECURITY;
+
+-- Contact submissions policies: Anyone can insert, only service role can read
+CREATE POLICY "Public insert access to contact_submissions" ON contact_submissions FOR
+INSERT
+    TO public
+WITH
+    CHECK (true);
+
+CREATE POLICY "Service role can read contact_submissions" ON contact_submissions FOR
+SELECT TO service_role USING (true);
+
+-- =============================================
 -- Done! Your database is ready.
 -- =============================================

@@ -57,7 +57,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           .single();
 
         if (error) {
-          console.error("Error fetching user profile:", error);
           // Return basic user info if profile not found
           return {
             id: supabaseUser.id,
@@ -67,8 +66,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         }
 
         return data;
-      } catch (err) {
-        console.error("Error in fetchUserProfile:", err);
+      } catch {
         return null;
       }
     },
@@ -87,8 +85,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           const profile = await fetchUserProfile(session.user);
           setUser(profile);
         }
-      } catch (error) {
-        console.error("Error initializing auth:", error);
+      } catch {
+        // Silently fail
       } finally {
         setIsLoading(false);
       }
@@ -153,14 +151,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             phone: phone || null,
           });
 
-          if (profileError) {
-            console.error("Error creating user profile:", profileError);
-          }
+          // Profile creation errors are non-fatal
+          void profileError;
         }
 
         return { error: null };
-      } catch (err) {
-        console.error("Sign up error:", err);
+      } catch {
         return { error: "An unexpected error occurred" };
       }
     },
@@ -183,8 +179,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         }
 
         return { error: null };
-      } catch (err) {
-        console.error("Sign in error:", err);
+      } catch {
         return { error: "An unexpected error occurred" };
       }
     },
@@ -199,8 +194,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       if (typeof window !== "undefined") {
         window.location.href = "/";
       }
-    } catch (error) {
-      console.error("Error signing out:", error);
+    } catch {
+      // Silently fail
     }
   }, [supabase]);
 

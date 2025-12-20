@@ -14,13 +14,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!email && !phone) {
-      return NextResponse.json(
-        { error: "Email or phone number is required" },
-        { status: 400 }
-      );
-    }
-
+    // Allow creating session even without email/phone (will be added later)
     const supabase = await createServerClient();
 
     // Check if session already exists
@@ -31,21 +25,15 @@ export async function POST(request: Request) {
       .single();
 
     if (existing) {
-      // Update existing session with new contact info
-      const { error } = await supabase
-        .from("chat_sessions")
-        .update({
-          email: email || undefined,
-          phone: phone || undefined,
-        })
-        .eq("chat_id", chatId);
-
-      if (error) {
-        console.error("Supabase error:", error);
-        return NextResponse.json(
-          { error: "Failed to update session" },
-          { status: 500 }
-        );
+      // Update existing session with new contact info if provided
+      if (email || phone) {
+        await supabase
+          .from("chat_sessions")
+          .update({
+            ...(email && { email }),
+            ...(phone && { phone }),
+          })
+          .eq("chat_id", chatId);
       }
 
       return NextResponse.json({ success: true, updated: true });
@@ -59,7 +47,6 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      console.error("Supabase error:", error);
       return NextResponse.json(
         { error: "Failed to create session" },
         { status: 500 }
@@ -67,8 +54,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, created: true });
-  } catch (error) {
-    console.error("Error creating session:", error);
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -93,10 +79,6 @@ export async function GET(request: Request) {
         .single();
 
       if (error) {
-        if (error.code === "PGRST116") {
-          return NextResponse.json({ session: null });
-        }
-        console.error("Supabase error:", error);
         return NextResponse.json({ session: null });
       }
 
@@ -110,13 +92,11 @@ export async function GET(request: Request) {
       .order("last_message_at", { ascending: false });
 
     if (error) {
-      console.error("Supabase error:", error);
       return NextResponse.json({ sessions: [] });
     }
 
     return NextResponse.json({ sessions: data || [] });
-  } catch (error) {
-    console.error("Error getting session:", error);
+  } catch {
     return NextResponse.json({ sessions: [] });
   }
 }

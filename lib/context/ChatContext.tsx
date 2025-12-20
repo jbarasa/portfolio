@@ -105,17 +105,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   const startChat = useCallback(
     async (info?: VisitorInfo) => {
       const currentVisitorInfo = info || visitorInfo;
-      console.log("startChat called:", {
-        chatId,
-        currentVisitorInfo,
-        hasStartedChat,
-      });
       if (!chatId || !currentVisitorInfo || hasStartedChat) {
-        console.log("startChat skipped:", {
-          chatId,
-          currentVisitorInfo,
-          hasStartedChat,
-        });
         return;
       }
 
@@ -130,20 +120,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
           }),
         });
 
-        const data = await res.json();
-        console.log("Session created response:", data);
-
         if (res.ok) {
           setHasStartedChat(true);
           if (typeof window !== "undefined") {
             localStorage.setItem("jbarasa_chat_started", "true");
           }
-          console.log("Chat session started successfully");
-        } else {
-          console.error("Failed to create session:", data);
         }
-      } catch (error) {
-        console.error("Error starting chat:", error);
+      } catch {
+        // Silently fail in production
       }
     },
     [chatId, visitorInfo, hasStartedChat]
@@ -159,8 +143,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         const res = await fetch("/api/admin/status");
         const data = await res.json();
         setIsOnline(data.isOnline);
-      } catch (error) {
-        console.error("Error fetching status:", error);
+      } catch {
+        // Silently fail
       }
     };
 
@@ -220,8 +204,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
             );
           setMessages(formattedMessages);
         }
-      } catch (error) {
-        console.error("Error fetching messages:", error);
+      } catch {
+        // Silently fail
       }
     };
 
@@ -281,14 +265,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       };
       setMessages((prev) => [...prev, newMessage]);
 
-      // Only save to database if chat has been started
-      console.log("addMessage called:", {
-        chatId,
-        hasStartedChat,
-        sender,
-        content,
-      });
-      if (chatId && hasStartedChat) {
+      // Always save to database if we have a chatId
+      if (chatId) {
         try {
           const res = await fetch("/api/chat/messages", {
             method: "POST",
@@ -297,21 +275,43 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
               chatId,
               sender: sender === "user" ? "visitor" : "admin",
               content,
+              email: visitorInfo?.email,
+              phone: visitorInfo?.phone,
             }),
           });
-          const data = await res.json();
-          console.log("Message saved response:", data);
-        } catch (error) {
-          console.error("Error saving message:", error);
+          // Auto-create session if needed
+          if (!res.ok && !hasStartedChat) {
+            // Try to create session first, then retry message
+            await fetch("/api/chat/session", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chatId,
+                email: visitorInfo?.email,
+                phone: visitorInfo?.phone,
+              }),
+            });
+            setHasStartedChat(true);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("jbarasa_chat_started", "true");
+            }
+            // Retry sending message
+            await fetch("/api/chat/messages", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chatId,
+                sender: sender === "user" ? "visitor" : "admin",
+                content,
+              }),
+            });
+          }
+        } catch {
+          // Silently fail in production
         }
-      } else {
-        console.warn("Message not saved - chat not started:", {
-          chatId,
-          hasStartedChat,
-        });
       }
     },
-    [chatId, hasStartedChat]
+    [chatId, hasStartedChat, visitorInfo]
   );
 
   const clearMessages = useCallback(() => {

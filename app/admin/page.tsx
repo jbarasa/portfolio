@@ -140,8 +140,8 @@ export default function AdminDashboard() {
         const res = await fetch("/api/admin/status");
         const data = await res.json();
         setIsOnline(data.isOnline);
-      } catch (error) {
-        console.error("Error fetching status:", error);
+      } catch {
+        // Silently fail
       } finally {
         setIsLoading(false);
       }
@@ -212,8 +212,8 @@ export default function AdminDashboard() {
       });
 
       setChatSessions(sortedSessions);
-    } catch (error) {
-      console.error("Error fetching messages:", error);
+    } catch {
+      // Silently fail in production
     }
   }, []);
 
@@ -244,8 +244,8 @@ export default function AdminDashboard() {
           setReplyInput("");
           fetchMessages();
         }
-      } catch (error) {
-        console.error("Error sending reply:", error);
+      } catch {
+        // Silently fail in production
       }
     },
     [fetchMessages, broadcastAdminTyping]
@@ -268,8 +268,6 @@ export default function AdminDashboard() {
           table: "chat_messages",
         },
         (payload) => {
-          console.log("Realtime message event:", payload.eventType, payload);
-
           if (payload.eventType === "INSERT") {
             const newMsg = payload.new as ChatMessage;
 
@@ -284,10 +282,7 @@ export default function AdminDashboard() {
           fetchMessages();
         }
       )
-      .subscribe((status, err) => {
-        console.log("Messages subscription status:", status);
-        if (err) console.error("Subscription error:", err);
-      });
+      .subscribe();
 
     // Channel for typing indicators (broadcast)
     const typingChannel = supabase
@@ -331,11 +326,9 @@ export default function AdminDashboard() {
 
       if (!res.ok) {
         setIsOnline(!newStatus);
-        console.error("Failed to update status");
       }
-    } catch (error) {
+    } catch {
       setIsOnline(!newStatus);
-      console.error("Error updating status:", error);
     }
   }, [isOnline, userIsAdmin]);
 
