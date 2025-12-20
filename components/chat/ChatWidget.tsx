@@ -13,7 +13,6 @@ const ChatWidget: React.FC = () => {
     addMessage,
     visitorInfo,
     setVisitorInfo,
-    hasStartedChat,
     startChat,
   } = useChat();
   const [inputValue, setInputValue] = useState("");
@@ -57,18 +56,17 @@ const ChatWidget: React.FC = () => {
     }
 
     setContactError("");
-    setVisitorInfo({ email: email || undefined, phone: phone || undefined });
+    const info = { email: email || undefined, phone: phone || undefined };
+    setVisitorInfo(info);
+
+    // Start chat session immediately with the visitor info
+    await startChat(info);
     setShowContactForm(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
-
-    // Start chat session if not started
-    if (!hasStartedChat) {
-      await startChat();
-    }
 
     addMessage(inputValue.trim(), "user");
     setInputValue("");

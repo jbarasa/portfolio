@@ -76,38 +76,47 @@ export async function POST(request: Request) {
   }
 }
 
-// GET - Get chat session info
+// GET - Get chat session info (single session by chatId or all sessions)
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const chatId = searchParams.get("chatId");
 
-    if (!chatId) {
-      return NextResponse.json(
-        { error: "Chat ID is required" },
-        { status: 400 }
-      );
-    }
-
     const supabase = await createServerClient();
 
+    // If chatId is provided, fetch single session
+    if (chatId) {
+      const { data, error } = await supabase
+        .from("chat_sessions")
+        .select("*")
+        .eq("chat_id", chatId)
+        .single();
+
+      if (error) {
+        if (error.code === "PGRST116") {
+          return NextResponse.json({ session: null });
+        }
+        console.error("Supabase error:", error);
+        return NextResponse.json({ session: null });
+      }
+
+      return NextResponse.json({ session: data });
+    }
+
+    // Fetch all sessions (for admin dashboard)
     const { data, error } = await supabase
       .from("chat_sessions")
       .select("*")
-      .eq("chat_id", chatId)
-      .single();
+      .order("last_message_at", { ascending: false });
 
     if (error) {
-      if (error.code === "PGRST116") {
-        return NextResponse.json({ session: null });
-      }
       console.error("Supabase error:", error);
-      return NextResponse.json({ session: null });
+      return NextResponse.json({ sessions: [] });
     }
 
-    return NextResponse.json({ session: data });
+    return NextResponse.json({ sessions: data || [] });
   } catch (error) {
     console.error("Error getting session:", error);
-    return NextResponse.json({ session: null });
+    return NextResponse.json({ sessions: [] });
   }
 }

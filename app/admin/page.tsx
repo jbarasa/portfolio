@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import {
   HiChat,
   HiClock,
@@ -21,15 +22,26 @@ import {
   HiBell,
   HiChartBar,
   HiGlobe,
+  HiReply,
+  HiPaperAirplane,
 } from "react-icons/hi";
 import { isAdmin } from "@/lib/constants";
 
 interface ChatMessage {
   id: number;
-  session_id: string;
+  chat_id: string;
   sender: string;
   content: string;
   created_at: string;
+}
+
+interface ChatSession {
+  chat_id: string;
+  email?: string;
+  phone?: string;
+  created_at: string;
+  last_message_at: string;
+  messages: ChatMessage[];
 }
 
 export default function AdminDashboard() {
@@ -37,6 +49,9 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [isOnline, setIsOnline] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [selectedSession, setSelectedSession] = useState<string | null>(null);
+  const [replyInput, setReplyInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
@@ -62,21 +77,134 @@ export default function AdminDashboard() {
     fetchStatus();
   }, []);
 
-  // Fetch messages from API
+  // Fetch messages and sessions from API
   const fetchMessages = useCallback(async () => {
     try {
-      const res = await fetch("/api/chat/messages");
-      const data = await res.json();
-      setMessages(data.messages || []);
+      // Fetch messages and sessions in parallel
+      const [messagesRes, sessionsRes] = await Promise.all([
+        fetch("/api/chat/messages"),
+        fetch("/api/chat/session"),
+      ]);
+
+      const messagesData = await messagesRes.json();
+      const sessionsData = await sessionsRes.json();
+
+      const fetchedMessages = messagesData.messages || [];
+      const fetchedSessions = sessionsData.sessions || [];
+
+      setMessages(fetchedMessages);
+
+      // Create a map of session info (email, phone) by chat_id
+      const sessionInfoMap = new Map<
+        string,
+        { email?: string; phone?: string }
+      >();
+      fetchedSessions.forEach(
+        (session: { chat_id: string; email?: string; phone?: string }) => {
+          sessionInfoMap.set(session.chat_id, {
+            email: session.email,
+            phone: session.phone,
+          });
+        }
+      );
+
+      // Group messages by chat_id to create sessions with contact info
+      const sessionMap = new Map<string, ChatSession>();
+      fetchedMessages.forEach((msg: ChatMessage) => {
+        if (!sessionMap.has(msg.chat_id)) {
+          const sessionInfo = sessionInfoMap.get(msg.chat_id) || {};
+          sessionMap.set(msg.chat_id, {
+            chat_id: msg.chat_id,
+            email: sessionInfo.email,
+            phone: sessionInfo.phone,
+            created_at: msg.created_at,
+            last_message_at: msg.created_at,
+            messages: [],
+          });
+        }
+        const session = sessionMap.get(msg.chat_id)!;
+        session.messages.push(msg);
+        if (new Date(msg.created_at) > new Date(session.last_message_at)) {
+          session.last_message_at = msg.created_at;
+        }
+      });
+
+      // Sort sessions by last message time (most recent first)
+      const sortedSessions = Array.from(sessionMap.values()).sort(
+        (a, b) =>
+          new Date(b.last_message_at).getTime() -
+          new Date(a.last_message_at).getTime()
+      );
+
+      // Sort messages within each session by created_at (oldest first)
+      sortedSessions.forEach((session) => {
+        session.messages.sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+      });
+
+      setChatSessions(sortedSessions);
     } catch (error) {
       console.error("Error fetching messages:", error);
     }
   }, []);
 
+  // Send reply to a chat session
+  const sendReply = useCallback(
+    async (chatId: string, content: string) => {
+      if (!content.trim()) return;
+
+      try {
+        const res = await fetch("/api/chat/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chatId,
+            sender: "admin",
+            content: content.trim(),
+          }),
+        });
+
+        if (res.ok) {
+          setReplyInput("");
+          fetchMessages(); // Refresh messages
+        }
+      } catch (error) {
+        console.error("Error sending reply:", error);
+      }
+    },
+    [fetchMessages]
+  );
+
   useEffect(() => {
     fetchMessages();
-    const interval = setInterval(fetchMessages, 5000);
-    return () => clearInterval(interval);
+
+    // Subscribe to realtime messages for instant updates
+    const supabase = createClient();
+    const channel = supabase
+      .channel("admin_messages")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "chat_messages",
+        },
+        () => {
+          // Refresh messages when a new message is inserted
+          fetchMessages();
+        }
+      )
+      .subscribe();
+
+    // Also poll as backup every 10 seconds
+    const interval = setInterval(fetchMessages, 10000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, [fetchMessages]);
 
   const toggleOnlineStatus = useCallback(async () => {
@@ -169,7 +297,7 @@ export default function AdminDashboard() {
     },
     {
       label: "Active Sessions",
-      value: new Set(messages.map((m) => m.session_id)).size.toString(),
+      value: chatSessions.length.toString(),
       icon: HiGlobe,
       color: "purple",
     },
@@ -527,78 +655,180 @@ export default function AdminDashboard() {
           )}
 
           {activeTab === "messages" && (
-            <div className="bg-gray-900/50 backdrop-blur-xl rounded-2xl border border-gray-800">
-              <div className="p-6 border-b border-gray-800">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-heading text-lg font-semibold text-white">
-                    All Messages
-                  </h3>
-                  <button
-                    onClick={fetchMessages}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-white bg-gray-800 rounded-lg transition-colors"
-                  >
-                    <HiRefresh size={16} />
-                    Refresh
-                  </button>
-                </div>
-              </div>
-              <div className="p-6">
-                {messages.length === 0 ? (
-                  <div className="text-center py-16">
-                    <div className="w-20 h-20 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <HiChat className="text-gray-600" size={36} />
-                    </div>
-                    <p className="text-gray-400 mb-2">No messages yet</p>
-                    <p className="text-sm text-gray-600">
-                      When visitors send messages, they&apos;ll appear here
-                    </p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Sessions List */}
+              <div className="bg-gray-900/50 backdrop-blur-xl rounded-2xl border border-gray-800">
+                <div className="p-4 border-b border-gray-800">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-heading text-lg font-semibold text-white">
+                      Chat Sessions
+                    </h3>
+                    <button
+                      onClick={fetchMessages}
+                      className="p-2 text-gray-400 hover:text-white bg-gray-800 rounded-lg transition-colors"
+                    >
+                      <HiRefresh size={16} />
+                    </button>
                   </div>
-                ) : (
-                  <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                    {messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex items-start gap-4 p-4 rounded-xl ${
-                          message.sender === "visitor"
-                            ? "bg-gray-800/50"
-                            : "bg-blue-500/5 border border-blue-500/10"
-                        }`}
-                      >
-                        <div
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                            message.sender === "visitor"
-                              ? "bg-gray-700"
-                              : "bg-blue-500/20"
+                </div>
+                <div className="max-h-[600px] overflow-y-auto">
+                  {chatSessions.length === 0 ? (
+                    <div className="text-center py-12 px-4">
+                      <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <HiChat className="text-gray-600" size={28} />
+                      </div>
+                      <p className="text-gray-500">No chat sessions yet</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-gray-800">
+                      {chatSessions.map((session) => (
+                        <button
+                          key={session.chat_id}
+                          onClick={() => setSelectedSession(session.chat_id)}
+                          className={`w-full text-left p-4 hover:bg-gray-800/50 transition-colors ${
+                            selectedSession === session.chat_id
+                              ? "bg-blue-500/10 border-l-2 border-blue-500"
+                              : ""
                           }`}
                         >
-                          <span
-                            className={`font-bold ${
-                              message.sender === "visitor"
-                                ? "text-gray-300"
-                                : "text-blue-400"
-                            }`}
-                          >
-                            {message.sender === "visitor" ? "V" : "A"}
-                          </span>
-                        </div>
-                        <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-white">
-                              {message.sender === "visitor"
-                                ? "Visitor"
-                                : "Admin"}
+                            <span className="text-sm font-medium text-white">
+                              {session.email || session.phone || "Anonymous"}
                             </span>
                             <span className="text-xs text-gray-500">
-                              {new Date(message.created_at).toLocaleString()}
+                              {new Date(
+                                session.last_message_at
+                              ).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </span>
                           </div>
-                          <p className="text-gray-300">{message.content}</p>
-                          <p className="text-xs text-gray-600 mt-2">
-                            Session: {message.session_id.slice(0, 20)}...
+                          <p className="text-xs text-gray-400 truncate">
+                            {session.messages[session.messages.length - 1]
+                              ?.content || "No messages"}
+                          </p>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {session.messages.length} message
+                            {session.messages.length !== 1 ? "s" : ""}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Chat Messages */}
+              <div className="lg:col-span-2 bg-gray-900/50 backdrop-blur-xl rounded-2xl border border-gray-800 flex flex-col">
+                {selectedSession ? (
+                  <>
+                    {/* Chat Header */}
+                    <div className="p-4 border-b border-gray-800">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium text-white">
+                            {chatSessions.find(
+                              (s) => s.chat_id === selectedSession
+                            )?.email ||
+                              chatSessions.find(
+                                (s) => s.chat_id === selectedSession
+                              )?.phone ||
+                              "Anonymous Visitor"}
+                          </h3>
+                          <p className="text-xs text-gray-500">
+                            Chat ID: {selectedSession.slice(0, 20)}...
                           </p>
                         </div>
+                        <button
+                          onClick={() => setSelectedSession(null)}
+                          className="p-2 text-gray-400 hover:text-white"
+                        >
+                          <HiX size={20} />
+                        </button>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Messages */}
+                    <div className="flex-1 p-4 overflow-y-auto max-h-[400px] space-y-3">
+                      {chatSessions
+                        .find((s) => s.chat_id === selectedSession)
+                        ?.messages.map((message) => (
+                          <div
+                            key={message.id}
+                            className={`flex ${
+                              message.sender === "admin"
+                                ? "justify-end"
+                                : "justify-start"
+                            }`}
+                          >
+                            <div
+                              className={`max-w-[80%] rounded-2xl p-3 ${
+                                message.sender === "admin"
+                                  ? "bg-blue-600 text-white rounded-br-none"
+                                  : "bg-gray-800 text-gray-200 rounded-bl-none"
+                              }`}
+                            >
+                              <p className="text-sm">{message.content}</p>
+                              <p
+                                className={`text-xs mt-1 ${
+                                  message.sender === "admin"
+                                    ? "text-blue-200"
+                                    : "text-gray-500"
+                                }`}
+                              >
+                                {new Date(
+                                  message.created_at
+                                ).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+
+                    {/* Reply Input */}
+                    <div className="p-4 border-t border-gray-800">
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          sendReply(selectedSession, replyInput);
+                        }}
+                        className="flex gap-2"
+                      >
+                        <input
+                          type="text"
+                          value={replyInput}
+                          onChange={(e) => setReplyInput(e.target.value)}
+                          placeholder="Type your reply..."
+                          className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!replyInput.trim()}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                          <HiPaperAirplane size={16} className="rotate-90" />
+                          <span className="hidden sm:inline">Send</span>
+                        </button>
+                      </form>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-20 h-20 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <HiReply className="text-gray-600" size={36} />
+                      </div>
+                      <p className="text-gray-400 mb-2">
+                        Select a conversation
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Choose a chat session from the list to view and reply
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>

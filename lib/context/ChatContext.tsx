@@ -37,7 +37,7 @@ interface ChatContextType {
   visitorInfo: VisitorInfo | null;
   setVisitorInfo: (info: VisitorInfo) => void;
   hasStartedChat: boolean;
-  startChat: () => Promise<void>;
+  startChat: (info?: VisitorInfo) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -101,30 +101,35 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   // Start chat - creates session in database
-  const startChat = useCallback(async () => {
-    if (!chatId || !visitorInfo || hasStartedChat) return;
+  // Accepts optional visitor info to avoid stale closure issues
+  const startChat = useCallback(
+    async (info?: VisitorInfo) => {
+      const currentVisitorInfo = info || visitorInfo;
+      if (!chatId || !currentVisitorInfo || hasStartedChat) return;
 
-    try {
-      const res = await fetch("/api/chat/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chatId,
-          email: visitorInfo.email,
-          phone: visitorInfo.phone,
-        }),
-      });
+      try {
+        const res = await fetch("/api/chat/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chatId,
+            email: currentVisitorInfo.email,
+            phone: currentVisitorInfo.phone,
+          }),
+        });
 
-      if (res.ok) {
-        setHasStartedChat(true);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("jbarasa_chat_started", "true");
+        if (res.ok) {
+          setHasStartedChat(true);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("jbarasa_chat_started", "true");
+          }
         }
+      } catch (error) {
+        console.error("Error starting chat:", error);
       }
-    } catch (error) {
-      console.error("Error starting chat:", error);
-    }
-  }, [chatId, visitorInfo, hasStartedChat]);
+    },
+    [chatId, visitorInfo, hasStartedChat]
+  );
 
   // Fetch initial admin status and subscribe to realtime updates
   useEffect(() => {
