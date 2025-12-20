@@ -3,22 +3,15 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-  useUser,
-} from "@clerk/nextjs";
-import { HiMenu, HiX } from "react-icons/hi";
+import { HiMenu, HiX, HiUser } from "react-icons/hi";
 import Button from "@/components/ui/Button";
 import { isAdmin } from "@/lib/constants";
+import { useAuth } from "@/lib/auth";
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-  const { user } = useUser();
-  const userEmail = user?.emailAddresses[0]?.emailAddress;
+  const { user, isAuthenticated, signOut } = useAuth();
+  const userEmail = user?.email;
   const userIsAdmin = isAdmin(userEmail);
 
   const navLinks = [
@@ -61,41 +54,66 @@ const Header: React.FC = () => {
 
           {/* Auth & CTA */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <SignedOut>
-              <SignInButton mode="modal">
-                <button className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 hidden sm:block">
+            {!isAuthenticated ? (
+              <>
+                <Link
+                  href="/sign-in"
+                  className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 hidden sm:block"
+                >
                   Sign In
-                </button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <Button variant="ghost" size="sm" className="hidden sm:block">
-                  Sign Up
-                </Button>
-              </SignUpButton>
-            </SignedOut>
-            <SignedIn>
-              {userIsAdmin ? (
-                <Link href="/admin" className="hidden sm:block">
+                </Link>
+                <Link href="/sign-up" className="hidden sm:block">
                   <Button variant="ghost" size="sm">
-                    Dashboard
+                    Sign Up
                   </Button>
                 </Link>
-              ) : (
-                <div className="hidden sm:block relative group">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="cursor-default opacity-70"
-                  >
-                    Track Project
-                  </Button>
-                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                    Coming Soon
-                  </span>
+              </>
+            ) : (
+              <>
+                {userIsAdmin ? (
+                  <Link href="/admin" className="hidden sm:block">
+                    <Button variant="ghost" size="sm">
+                      Dashboard
+                    </Button>
+                  </Link>
+                ) : (
+                  <div className="hidden sm:block relative group">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="cursor-default opacity-70"
+                    >
+                      Track Project
+                    </Button>
+                    <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                      Coming Soon
+                    </span>
+                  </div>
+                )}
+                {/* User Menu */}
+                <div className="relative group hidden sm:block">
+                  <button className="flex items-center gap-2 p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+                    <HiUser size={20} className="text-gray-600" />
+                  </button>
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                    <div className="p-3 border-b border-gray-100">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {user?.full_name || "User"}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {userEmail}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => signOut()}
+                      className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
                 </div>
-              )}
-              <UserButton afterSignOutUrl="/" />
-            </SignedIn>
+              </>
+            )}
             <a href="#contact" className="hidden sm:block">
               <Button size="sm">Start Chat</Button>
             </a>
@@ -125,35 +143,57 @@ const Header: React.FC = () => {
                   {link.label}
                 </a>
               ))}
-              <SignedIn>
-                {userIsAdmin ? (
-                  <Link
-                    href="/admin"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="text-gray-600 hover:text-gray-900 py-2 text-sm font-medium"
-                  >
-                    Dashboard
-                  </Link>
-                ) : (
-                  <span className="text-gray-400 py-2 text-sm font-medium">
-                    Track Project <span className="text-xs">(Coming Soon)</span>
-                  </span>
-                )}
-              </SignedIn>
-              <SignedOut>
+              {isAuthenticated ? (
+                <>
+                  {userIsAdmin ? (
+                    <Link
+                      href="/admin"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="text-gray-600 hover:text-gray-900 py-2 text-sm font-medium"
+                    >
+                      Dashboard
+                    </Link>
+                  ) : (
+                    <span className="text-gray-400 py-2 text-sm font-medium">
+                      Track Project{" "}
+                      <span className="text-xs">(Coming Soon)</span>
+                    </span>
+                  )}
+                  <div className="pt-2 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 mb-2">{userEmail}</p>
+                    <button
+                      onClick={() => {
+                        signOut();
+                        setIsMenuOpen(false);
+                      }}
+                      className="text-red-600 hover:text-red-700 py-2 text-sm font-medium"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </>
+              ) : (
                 <div className="flex gap-2 pt-2 border-t border-gray-100">
-                  <SignInButton mode="modal">
-                    <Button variant="ghost" size="sm" className="flex-1">
+                  <Link
+                    href="/sign-in"
+                    className="flex-1"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Button variant="ghost" size="sm" fullWidth>
                       Sign In
                     </Button>
-                  </SignInButton>
-                  <SignUpButton mode="modal">
-                    <Button variant="primary" size="sm" className="flex-1">
+                  </Link>
+                  <Link
+                    href="/sign-up"
+                    className="flex-1"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Button variant="primary" size="sm" fullWidth>
                       Sign Up
                     </Button>
-                  </SignUpButton>
+                  </Link>
                 </div>
-              </SignedOut>
+              )}
               <a href="#contact" onClick={() => setIsMenuOpen(false)}>
                 <Button size="sm" fullWidth className="mt-2">
                   Start Chat

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Public_Sans } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import { ChatProvider } from "@/lib/context/ChatContext";
+import { AuthProvider } from "@/lib/auth";
 
 const geist = Geist({
   variable: "--font-heading",
@@ -149,24 +149,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en">
-        <head>
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-          />
-        </head>
-        <body
-          className={`${geist.variable} ${publicSans.variable} font-body antialiased bg-white text-gray-900`}
-        >
+    <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
+      <body
+        className={`${geist.variable} ${publicSans.variable} font-body antialiased bg-white text-gray-900`}
+      >
+        <AuthProvider>
           <ChatProvider>
             <Header />
             <main>{children}</main>
           </ChatProvider>
-          <Analytics />
-        </body>
-      </html>
-    </ClerkProvider>
+        </AuthProvider>
+        <Analytics />
+      </body>
+    </html>
   );
 }

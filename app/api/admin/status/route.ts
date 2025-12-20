@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
 import { createServerClient } from "@/lib/supabase";
 import { isAdmin } from "@/lib/constants";
 
@@ -27,13 +26,18 @@ export async function GET() {
 // POST - Toggle admin online status (admin only)
 export async function POST(request: Request) {
   try {
-    const user = await currentUser();
+    const supabase = await createServerClient();
+
+    // Get current user from Supabase auth
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userEmail = user.emailAddresses[0]?.emailAddress;
+    const userEmail = user.email;
 
     if (!isAdmin(userEmail)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -42,7 +46,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { isOnline } = body;
 
-    const supabase = await createServerClient();
     const { error } = await supabase.from("settings").upsert(
       {
         key: "admin_online",

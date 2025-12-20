@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { useUser, SignOutButton } from "@clerk/nextjs";
+import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -33,7 +33,7 @@ interface ChatMessage {
 }
 
 export default function AdminDashboard() {
-  const { isLoaded, isSignedIn, user } = useUser();
+  const { user, isLoading: authLoading, isAuthenticated, signOut } = useAuth();
   const router = useRouter();
   const [isOnline, setIsOnline] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -43,7 +43,7 @@ export default function AdminDashboard() {
     "overview" | "messages" | "settings"
   >("overview");
 
-  const userEmail = user?.emailAddresses[0]?.emailAddress;
+  const userEmail = user?.email;
   const userIsAdmin = isAdmin(userEmail);
 
   // Fetch admin status from API
@@ -104,12 +104,12 @@ export default function AdminDashboard() {
 
   // Redirect if not signed in
   useEffect(() => {
-    if (isLoaded && !isSignedIn) {
+    if (!authLoading && !isAuthenticated) {
       router.push("/sign-in");
     }
-  }, [isLoaded, isSignedIn, router]);
+  }, [authLoading, isAuthenticated, router]);
 
-  if (!isLoaded || isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -120,7 +120,7 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!isSignedIn) {
+  if (!isAuthenticated) {
     return null;
   }
 
@@ -305,12 +305,13 @@ export default function AdminDashboard() {
               <HiHome size={20} />
               <span className="font-medium">Back to Site</span>
             </Link>
-            <SignOutButton>
-              <button className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-colors">
-                <HiLogout size={20} />
-                <span className="font-medium">Sign Out</span>
-              </button>
-            </SignOutButton>
+            <button
+              onClick={() => signOut()}
+              className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
+            >
+              <HiLogout size={20} />
+              <span className="font-medium">Sign Out</span>
+            </button>
           </div>
         </div>
       </aside>
@@ -329,7 +330,7 @@ export default function AdminDashboard() {
               </button>
               <div>
                 <h2 className="font-heading text-xl font-bold text-white">
-                  Welcome back, {user?.firstName || "Admin"}
+                  Welcome back, {user?.full_name?.split(" ")[0] || "Admin"}
                 </h2>
                 <p className="text-sm text-gray-500">
                   Manage your portfolio and chat settings
@@ -371,9 +372,9 @@ export default function AdminDashboard() {
               </button>
 
               {/* User Avatar */}
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                 <span className="text-white font-bold text-sm">
-                  {user?.firstName?.[0] || "A"}
+                  {user?.full_name?.[0] || "A"}
                 </span>
               </div>
             </div>
